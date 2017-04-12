@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Fiber Recap</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/night.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h1>FIBER</h1>
+					<p>Building apps for React 16</p>
+					<p>&nbsp;</p>
+					<h4>Chris Shiplet / @chrisshiplet</h4>
+					<h4>Synapse Studios</h4>
+					<aside class="notes">
+						Oh hey, these are some notes.
+					</aside>
+				</section>
+				<section>
+					<h2>What is Fiber?</h2>
+					<h4 class="fragment">New algorithm for React 16's reconciler</h4>
+				</section>
+				<section>
+					<h2>Reconciler??</h2>
+					<aside class="notes">
+						<ul>
+							<li>Core algorithm behind "virtual DOM"</li>
+							<li>Figures out diff of previous and current state of DOM</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>"virtual DOM"</h2>
+					<aside class="notes">
+						<ul>
+							<li>Core algorithm behind "virtual DOM"</li>
+							<li>Figures out diff of previous and current state of DOM</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h3>Reconciliation in React 15</h3>
+					<ul>
+						<li>Single, atomic thread of execution</li>
+						<li>Recursively renders tree of components</li>
+						<li>React optimizes work, orders changes to DOM</li>
+						<li>"Stack Reconciler"</li>
+					</ul>
+					<aside class="notes">
+						<ul>
+							<li>How do things work today?</li>
+							<li>React is a supervisor</li>
+						</ul>
+					</aside>
+				</section>
+				<section data-background-image="https://cdn0.vox-cdn.com/thumbor/UrXdkhVgvmUt6yidlMMYtZ8xECc=/49x0:551x335/1310x873/cdn0.vox-cdn.com/uploads/chorus_image/image/45631764/starlink-2.0.0.gif">
+					<aside class="notes">
+						<ul>
+							<li>Task scheduling is core to native UI rendering</li>
+							<li>Want to place very high priority on rendering things user is interacting with</li>
+							<li>Until now, entire component tree had same "priority"</li>
+							<li>No longer the case with interruptible async rendering (opt in!)</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h1>FIBER</h1>
+					<ul>
+						<li class="fragment">2 phases: Render/Reconcile (interruptible), Commit (non-interruptible)</li>
+						<li class="fragment">Track children, siblings for each component</li>
+						<li class="fragment">Build "WIP" tree, avoid DOM mutation until finished</li>
+						<li class="fragment">Interrupt rendering to handle high-priority events</li>
+					</ul>
+					<aside class="notes">
+						<ul>
+							<li>Backwards compatible API, ground-up rewrite</li>
+							<li>
+								WIP tree to avoid making changes to DOM while calculating update
+								(unlike stack reconciler, which updates DOM as it goes)
+							</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h1 class="fragment current-visible">FIBER</h1>
+					<p class="fragment current-visible">Building apps for React 16</p>
+					<aside class="notes">
+						<ul>
+							<li>Time for the "Building apps for React 16" part
+							<li>Your app should work out of the box</li>
+							<li>Facebook runs prod on master branch</li>
+							<li>There are some changes to address before we can take advantage of new reconciler</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Do:</h2>
+					<p>use Flow or <code>prop-types</code> instead of <code>React.PropTypes</code></p>
+					<aside class="notes">
+						PropTypes is deprecated in 15.5 and will be moved to its own package
+					</aside>
+				</section>
+				<section>
+					<h2>Do:</h2>
+					<p>return multiple components</p>
+					<p>&nbsp;</p>
+					<pre><code class="js" data-trim>
+						render() {
+							return [
+								&lt;Foo /&gt;,
+								&lt;Bar /&gt;,
+							];
+						}
+					</code></pre>
+					<aside class="notes">
+						Components can now return an array of children
+					</aside>
+				</section>
+				<section>
+					<h2>Do:</h2>
+					<p>use functional <code>setState</code></p>
+					<p>&nbsp;</p>
+					<pre><code class="js" data-trim>
+						this.setState((state, props) => {
+							return {
+								someToggleValue: !state.someToggleValue,
+							};
+						});
+					</code></pre>
+					<aside class="notes">
+						React can schedule state changes at a later time (requestIdleCallback)
+					</aside>
+				</section>
+				<section>
+					<h2>Avoid:</h2>
+					<h3><code>React.createClass</code></h3>
+					<p>in favor of functional components and classes</p>
+					<aside class="notes">
+						createClass will be deprecated in 15.5 and moved to its own package in 16
+					</aside>
+				</section>
+				<section>
+					<h2>Avoid:</h2>
+					<p>doing init / data fetching in</p>
+					<h3><code>componentWillMount</code></h3>
+					<aside class="notes">
+						may be called before mount is cancelled, so the existing instance will be thrown away without running a cleanup method
+					</aside>
+				</section>
+				<section>
+					<h2>Avoid:</h2>
+					<p>relying on</p>
+					<h3><code>componentWillUpdate</code>, <code>componentWillReceiveProps</code></h3>
+					<p>to be called exactly once before each render</p>
+					<aside class="notes">
+						cWU and cWRP may be called multiple times before render is flushed and cDU is called, prevProps in cDU will be last props flushed
+					</aside>
+				</section>
+				<section>
+					<h1>FIBER</h1>
+					<p>Building apps for React 16</p>
+					<p>&nbsp;</p>
+					<h4>Chris Shiplet / @chrisshiplet</h4>
+					<h4>Synapse Studios</h4>
+					<aside class="notes">
+						Oh hey, these are some notes.
+					</aside>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: false,
+				progress: false,
+				history: true,
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
